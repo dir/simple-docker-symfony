@@ -13,7 +13,7 @@ Simple Dockerfile for Symfony/Composer LAMP stack. Intended for development.
 Then setup your database accordingly.
 
 ## Tips
-- To access a MySQL database hosted locally on your computer, in your MySQL parameters replace all instances of `localhost` or `127.0.0.1` to `host.docker.internal`
+- To access a MySQL database hosted locally on your computer, in your MySQL connection parameters replace all instances of `localhost` or `127.0.0.1` to `host.docker.internal`
 - Ensure that the `WORKDIR` in the dockerfile is configured properly, and that you are `COPY`ing the correct folder.
 
 ## Why?
