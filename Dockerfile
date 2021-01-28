@@ -2,31 +2,49 @@
 FROM ubuntu:16.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# Initial update/upgrade
-RUN apt-get -y update && \
-    apt-get -y upgrade
+RUN apt-get update && \
+	apt-get install -y --no-install-recommends \
+	# General Installs
+	git \
+	zip \
+	unzip \
+	wget \
+	curl \
+	python3-setuptools \
+	nano \
+	logrotate \
+	# LAMP Installs
+	apache2 \
+	php-xdebug \
+	libapache2-mod-php \
+	mysql-server \
+	php-mysql \
+	php-apcu \
+	php-gd \
+	php-xml \
+	php-mbstring \
+	php-gettext \
+	php-zip \
+	php-curl \
+	ca-certificates \
+	openssh-client
 
-# Dependencies/general installs
-RUN apt-get -y install git && \
-    apt-get -y install zip unzip && \
-    apt-get -y install wget curl && \
-    apt-get -y install python3-setuptools && \
-    apt-get -y install nano logrotate
+# Composer Installation
+RUN mkdir /opt/composer && \
+	curl --silent --show-error -o composer-setup.php https://getcomposer.org/installer && \
+	EXPECTED_SIGNATURE=$(curl --silent --show-error https://composer.github.io/installer.sig) && \
+	ACTUAL_SIGNATURE=$(php -r "echo hash_file('SHA384', 'composer-setup.php');") && \
+	if [ "${EXPECTED_SIGNATURE}" != "${ACTUAL_SIGNATURE}" ]; then \
+		>&2 echo 'ERROR: Invalid composer installer signature' && \
+		rm composer-setup.php && \
+		exit 1 \
+	; fi \
+	&& php composer-setup.php --install-dir=/opt/composer \
+	&& rm composer-setup.php \
+	&& mv /opt/composer/composer.phar /usr/local/bin/composer
 
-# LAMP Setup
-RUN apt-get -y install apache2 php-xdebug libapache2-mod-php && \
-    apt-get -y install mysql-server php-mysql && \
-    apt-get -y install php-apcu php-gd php-xml php-mbstring php-gettext php-zip php-curl
-
-# Composer Install
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" && \
-    php composer-setup.php && \
-    php -r "unlink('composer-setup.php');" && \
-    mv composer.phar /usr/local/bin/composer
-
-# Symfony Install
+# Symfony Installation
 RUN wget https://get.symfony.com/cli/installer -O - | bash
 ENV PATH="/root/.symfony/bin:${PATH}"
 
@@ -35,15 +53,11 @@ WORKDIR /usr/src/app
 COPY /application .
 
 # Install application dependencies
+ENV COMPOSER_ALLOW_SUPERUSER=1
 RUN composer install --no-interaction
 
 # Enable rewrite in apache2 config
 RUN a2enmod rewrite
-
-# Set some volumes for logs and apache2
-VOLUME /var/www/html
-VOLUME /var/log/httpd
-VOLUME /etc/apache2
 
 # Expose the port
 EXPOSE 8000
